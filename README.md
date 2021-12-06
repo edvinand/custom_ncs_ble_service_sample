@@ -43,7 +43,7 @@ Start by selecting *Create a new application from sample* in the *nRF Connect* -
 
 Setup Application from Sample | 
 ------------ |
-<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/application_from_sample.PNG" width="1000"> |
+<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/application_from_sample.PNG" width="600"> |
 
 </br>
 Now we have copied the sample to our custom applications folder, but we need to create a build environment before we can compile and flash the sample to our board. 
@@ -58,7 +58,7 @@ If everything goes well, you should have flashed the *hello_world* sample to you
 
 Connect to board's UART | 
 ------------ |
-<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/connect_uart.PNG" width="1000"> |
+<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/connect_uart.PNG" width="300"> |
 </br>
 A popup will occur with some UART settings. Just hit the enter key to select *115200 8n1*, and open the *NRF_TERMINAL* in your bottom terminal. It should print something like:
 *Hello World! nrf52840dk_nrf52840*
