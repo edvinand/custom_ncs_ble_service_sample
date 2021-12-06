@@ -64,4 +64,35 @@ A popup will occur with some UART settings. Just hit the enter key to select *11
 *Hello World! nrf52840dk_nrf52840*
 
 ### Step 2 - Enabling some basic application features
-So 
+Congratulations! You have built and flashed our first application. Let's move on by doing some minor modifications. If you explore some of the samples from the *nrf* folder in NCS, you'll see that most of them use our logging module, which is what we will use as well. In order to do so, please replace the line '#include <sys/printk.h>' with '#include <logging/log.h>. In order to use the log module, we need to add a few things in the prj.conf file. You will find it from the application tab (called remote_controller if you didn't change it) -> Input files -> prj.conf. At this point, it should just say '#nothing here'.
+</br>
+Add the following:
+'''
+# Configure logger
+CONFIG_LOG=y
+CONFIG_USE_SEGGER_RTT=n
+CONFIG_LOG_BACKEND_UART=y
+CONFIG_LOG_DEFAULT_LEVEL=3
+'''
+They are quite self explaining, but what we are doing here is enabling the log module, deselecting the default RTT backend, selecting the UART backend, and setting the log level to 3 (INFO). <br>
+Back in main.c, try replacing the 'printk()' with 'LOG_INF();' and add the following snippet before 'void main(void)'
+'''C
+#define LOG_MODULE_NAME app
+LOG_MODULE_REGISTER(LOG_MODULE_NAME);
+'''
+Compile and flash the application again, and you should see that it still prints over UART, but now we are using the log module
+
+</br>
+Before we start adding Bluetooth, we want to set up some LEDs that we can use to indicate that our application is still running, and hasn't crashed, and some buttons that we can use later to trigger certain BLE calls.
+Start by including <dk_buttons_and_leds.h> in your main.c file.
+Next, create a function to initiate the LEDs and buttons. I will call mine 'static void configure_dk_buttons_leds(void)'.
+The first thing we need to do in this to enable the LEDs. Looking in dk_buttons_and_leds.h, we can look for a function that does about that. Try adding 'dk_leds_init()' to your configure_dk_buttons_leds() function. Since this function returns and int, we would like to check the return value. 
+'''C
+    int err;
+    err = dk_leds_init();
+    if (err) {
+        LOG_ERR("Couldn't init LEDS (err %d)", err);
+    }
+'''
+
+Then look for a function that can enable the buttons. 
