@@ -43,7 +43,7 @@ Start by selecting *Create a new application from sample* in the *nRF Connect* -
 
 Setup Application from Sample | 
 ------------ |
-<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/application_from_sample.PNG" width="600"> |
+<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/application_from_sample.PNG"> |
 
 </br>
 Now we have copied the sample to our custom applications folder, but we need to create a build environment before we can compile and flash the sample to our board. 
