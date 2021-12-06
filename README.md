@@ -33,5 +33,5 @@ The aim of this tutorial is to simply create one service with two characteristic
 If you haven't done it already, start by setting up nRF Connect for Visual Studio code by setting the environment parameters. Under the nRF Connect tab in Visual Studio Code (VSC) click "Open welcome page" and click "Quick Setup". 
 Memory Settings Segger Embedded Studio | 
 ------------ |
-<img src="https://github.com/edvinand/bluetooth_introe/blob/master/images/welcome_page.PNG" width="1000"> |
+<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/welcome_page.PNG" width="1000"> |
 
