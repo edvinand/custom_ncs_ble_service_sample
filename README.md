@@ -383,7 +383,7 @@ struct bt_conn_cb bluetooth_callbacks = {
 };
 ```
 
-**Challenge**
+**Challenge:** </br>
 ***Implement these callbacks by looking at the bt_conn_cb struct definition (ctrl click it). For now, you can just print something using `LOG_INF()` in the events. Then try to pass the bluetooth_callbacks on into `bluetooth_init()`, and register the callbacks using `bt_conn_cb_register()` before the call to `bt_enable()`. If you are stuck, you can find a solution below.***
 </br>
 </br>
@@ -457,12 +457,14 @@ ssize_t bt_gatt_attr_read(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 *Hint: Create a parameter in remote.c that you call "uint8_t button_value", and set it to 0. Use the address of this value (&), and the sizeof(button_value) as input parameters for bt_gatt_attr_read()*
 </br>
 </br>
-**Challenge**
+**Challenge:** </br>
 ***Before we try to connect again, create a function in remote.c that we can call from main.c (add declaration in remote.h) that changes the value of the parameter `button_value` based on an input parameter. Call it "set_button_value()" and call it in the button_handler from main.c, with the button_pressed parameter as the input.***
+</br>
 </br>
 *Hint: If you are stuck, I uploaded another snapshot of the project here: 
 [main.c](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot2/main.c), 
 [remote.c](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot2/remote_service/remote.c), 
 [remote.h](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot2/remote_service/remote.h).*
+</br>
 </br>
 Now, try to connect to your device using nRF Connect, and see that you have a characteristic that you can read. Whenever you push a button on your DK and read it again, you should see the value update.
