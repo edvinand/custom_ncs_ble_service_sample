@@ -280,7 +280,7 @@ After this sidetrack (rebuild/recompilation required), it is time to see what bt
 </br>
 Application Tree | 
 ------------ |
-<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/VSC_hint.PNG"> |
+<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/VSC_hint.png"> |
 </br>
 So we see that it returns an `int` and it takes an input `bt_ready_cb_t`. By going to the definition of `bt_ready_cb_t` you'll see that it is:
 ```C
