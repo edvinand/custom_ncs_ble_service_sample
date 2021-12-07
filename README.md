@@ -240,7 +240,7 @@ If you right click "remote.h" that you just wrote, and click "Go to Definition" 
 #include <logging/log.h>
 ```
 
-Now, try to create a function called `bluetooth_init()` in your remote.c file that you also need to declare in remote.h. Make the function return `0`, and check this return value in `main()`. Add whatever is needed in these two files so that you can use this function to log "Initializing Bluetooth".
+Now, try to create a function called `bluetooth_init()` in your remote.c file that you also need to declare in remote.h. Make the function return `0`, and check this return value in `main()`. Add whatever is needed in these two files so that you can use this function to log "Initializing Bluetooth". Remember to include remote.h from your main.c file.
 </br>
 *Hint 1: You shouldn't need to include any more files in remote.c.*
 </br>
@@ -366,3 +366,29 @@ Now your device should advertise if you flash it with the latest build. Open nRF
 Scan uisng nRF Connect for Desktop | 
 ------------ |
 <img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/scan_advertisements.PNG"> |
+
+*Note: In your case it probably will not say "Remote Service" in the Services field, but rather the UUID that you generated. If you want to save this custom UUID in nRF Connect for Desktop, click the gear icon (settings) on the nrf5x device, and select "Open UUID definitions file". See if you can copy the template of one of the services, and insert your own UUID.*
+</br>
+</br>
+You can actually connect to your device, since we claimed in the `BT_LE_ADV_CONN` that we are connectable. However, if you try to connect to it, you will see that other than the Generic Attribute and the Generic Access services, we don't actually have the custom service that we claimed to have in the advertising packet. We will fix that later, but first, let us try to inform our application that something actually connected to us.
+</br>
+</br>
+We want to receive these events in our main.c file, so that we can keep track of the state of our device. Let us start by adding a struct containing the callbacks in main.c:
+</br>
+
+```C
+struct bt_conn_cb bluetooth_callbacks = {
+	.connected 	= on_connected,
+	.disconnected 	= on_disconnected,
+};
+```
+
+**Challenge**
+***Implement these callbacks by looking at the bt_conn_cb struct definition (ctrl click it). For now, you can just print something using `LOG_INF()` in the events. Then try to pass the bluetooth_callbacks on into `bluetooth_init()`, and register the callbacks using `bt_conn_cb_register()` before the call to `bt_enable()`. If you are stuck, you can find a solution below.***
+</br>
+</br>
+If you followed the guide this far, your files should look something like this. You can use this in case you got stuck somewhere. Please note that I also added some new code to the connected and disconnected events in main.c, and a current_conn parameter to keep track of the current connection.
+</br>
+[(main.c)](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot1/main.c)</br>
+[(remote.c)](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot1/remote_service/remote.c)</br>
+[(remote.h)](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot1/remote_service/remote.h)</br>
