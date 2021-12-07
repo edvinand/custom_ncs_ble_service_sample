@@ -732,3 +732,4 @@ You can find online string-to-hex generators online, such as [this one](https://
 48 65 6C 6C 6F 77 6F 72 6C 64 21
 </br>
 </br>
+You can find the final files and NCS project [here](https://github.com/edvinand/bluetooth_intro/tree/main/remote_controller).
