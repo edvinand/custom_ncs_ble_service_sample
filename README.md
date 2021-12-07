@@ -203,10 +203,11 @@ void main(void)
 }
 ```
 
-### Step 3 - Adding bluetooth
+### Step 3 - Adding Bluetooth
 It is finally time to add bluetooth to our project. A hint was given in the project name, but in case you missed it, we will write an application that mimics some sort of bluetooth remote, where we will be able to send button presses to a connected Bluetooth Low Energy Central. We will also add the oppurtynity to write back to the remote control. That may not be a typical feature for a remote control, but for the purpose of learning how to communicate in both directions we will add this. The connected central can either be your phone, a computer, or another nRF52. For this guide we will use a separate DK and nRF Connect for Desktop -> Bluetooth, but if you only have one DK, you can use [(nRF Connect for iOS or Android.)](https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-mobile)
-</br></br>
-Because we want to keep our main.c file as clutter free as possible, we will try to do most of the bluetooth configuration and handling in another file, and only push certain events back to main.c. Therefore we will start by adding a few custom files. Create a folder named `remote_service` inside your application file: *remote_controller\src\remote_service\*. You can either do this from VSC or your operating system. Inside this folder, create two files: `remote.h` and `remote.c`. To include these custom files to your project, open CMakeLists.txt, and add the following snippet at the end:
+</br>
+</br>
+Because we want to keep our main.c file as clutter free as possible, we will try to do most of the bluetooth configuration and handling in another file, and only push certain events back to main.c. Therefore we will start by adding a few custom files. Create a folder named `remote_service` inside your application file: *remote_controller\src\remote_service\.* You can either do this from VSC or your operating system. Inside this folder, create two files: `remote.h` and `remote.c`. To include these custom files to your project, open CMakeLists.txt, and add the following snippet at the end:
 
 ```C
 # Custom files and folders
@@ -217,4 +218,80 @@ target_sources(app PRIVATE
 
 zephyr_library_include_directories(src/remote_service)
 ```
-*If you wanted to add more .c files, you could do so by separating them using `;` after remote.c. and have one file per line.*
+*If you wanted to add more .c files, you could do so by separating them using `;` after `remote.c`. and have one file per line.*
+</br>
+If you build your application you should see that the remote.c file appears under your *REMOTE_CONTROLLER* tab:
+
+Application Tree | 
+------------ |
+<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/application_tree.PNG"> |
+
+</br>
+Open remote.c and add the line at the very top: </br>
+
+```C
+#include "remote.h"
+```
+
+If you right click "remote.h" that you just wrote, and click "Go to Definition" it should open the remote.h file in VSC. In remote.h, add:
+
+```C
+#include <zephyr.h>
+#include <logging/log.h>
+```
+
+Now, try to create a function called `bluetooth_init()` in your remote.c file that you also need to declare in remote.h. Make the function return `0`, and check this return value in `main()`. Add whatever is needed in these two files so that you can use this function to log "Initializing Bluetooth".
+</br>
+*Hint 1: You shouldn't need to include any more files in remote.c.*
+</br>
+*Hint 2: Give remote.c another log module name, so that it is easy to see from the log what file that printed what lines.*
+</br>
+
+
+Now that we have our own file to do most of the Bluetooth, let us start by adding these four header files in our remote.h file:
+```C
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/uuid.h>
+#include <bluetooth/gatt.h>
+#include <bluetooth/hci.h>
+```
+For most Bluetooth Low Energy, these four files will do the job. Let us start by adding `bt_enable()` to our `bluetooth_init()` function. In order to see what input bt_enable() takes, you may want to build, and probably you will find out that bt_enable is not defined yet. The reason for this is, like earlier, that we have not enabled Bluetooth in our prj.conf file. Try to add the following:
+```
+# Configure Bluetooth
+CONFIG_BT=y
+CONFIG_BT_PERIPHERAL=y
+CONFIG_BT_DEVICE_NAME="Remote_controller"
+CONFIG_BT_DEVICE_APPEARANCE=0
+CONFIG_BT_MAX_CONN=1
+CONFIG_BT_LL_SOFTDEVICE=y
+
+CONFIG_ASSERT=y
+````
+What we do here is:
+- Enable Bluetooth,
+- Support the peripheral (advertising) role
+- Set our device_name, which we will use later
+- Set the appearance. Look in the description of this configuration to see what this does.
+- Set the maximum simultaneous connections to 1.
+- Tell it to use the Nordic Softdevice Controller. 
+
+</br>
+After this sidetrack (rebuild/recompilation required), it is time to see what bt_enable does. In nRF Connect for VS Code, if you hold ctrl and hover bt_enable(), you should see the declaration of the function. If you ctrl click it, it should bring you to the definition. We can use this to see what it returns and what input parameters it takes.
+</br>
+Application Tree | 
+------------ |
+<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/VSC_hint.PNG"> |
+</br>
+So we see that it returns an `int` and it takes an input `bt_ready_cb_t`. By going to the definition of `bt_ready_cb_t` you'll see that it is:
+```C
+typedef void (*bt_ready_cb_t)(int err);
+```
+This means a function pointer. It means that it takes a callback function as an input parameter. The callback is on the form: `void callback_name(int err)`. Let us use a callback called `bt_ready`, which we will implement above `bluetooth_init()` in remote.c, and pass it onto `bt_enable()`.
+```C
+void bt_ready(int err)
+{
+    if (err) {
+        LOG_ERR("bt_enable returned %d", err);
+    }
+}
+```
