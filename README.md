@@ -64,35 +64,141 @@ A popup will occur with some UART settings. Just hit the enter key to select *11
 *Hello World! nrf52840dk_nrf52840*
 
 ### Step 2 - Enabling some basic application features
-Congratulations! You have built and flashed our first application. Let's move on by doing some minor modifications. If you explore some of the samples from the *nrf* folder in NCS, you'll see that most of them use our logging module, which is what we will use as well. In order to do so, please replace the line '#include <sys/printk.h>' with '#include <logging/log.h>. In order to use the log module, we need to add a few things in the prj.conf file. You will find it from the application tab (called remote_controller if you didn't change it) -> Input files -> prj.conf. At this point, it should just say '#nothing here'.
+Congratulations! You have built and flashed our first application. Let's move on by doing some minor modifications. If you explore some of the samples from the *nrf* folder in NCS, you'll see that most of them use our logging module, which is what we will use as well. In order to do so, please replace the line '#include <sys/printk.h>' with '#include <logging/log.h>. In order to use the log module, we need to add a few things in the prj.conf file. You will find it from the application tab (called remote_controller if you didn't change it) -> Input files -> prj.conf. At this point, it should just say `#nothing here`.
 </br>
 Add the following:
-'''
-#### Configure logger
+```
+# Configure logger
 CONFIG_LOG=y
 CONFIG_USE_SEGGER_RTT=n
 CONFIG_LOG_BACKEND_UART=y
 CONFIG_LOG_DEFAULT_LEVEL=3
-'''
+```
 They are quite self explaining, but what we are doing here is enabling the log module, deselecting the default RTT backend, selecting the UART backend, and setting the log level to 3 (INFO). <br>
-Back in main.c, try replacing the 'printk()' with 'LOG_INF();' and add the following snippet before 'void main(void)'
-'''C
+Back in main.c, try replacing the `printk()` with `LOG_INF();` and add the following snippet before `void main(void)`
+```C
 #define LOG_MODULE_NAME app
 LOG_MODULE_REGISTER(LOG_MODULE_NAME);
-'''
+```
 Compile and flash the application again, and you should see that it still prints over UART, but now we are using the log module
 
 </br>
+
+#### Configure buttons and LEDs
 Before we start adding Bluetooth, we want to set up some LEDs that we can use to indicate that our application is still running, and hasn't crashed, and some buttons that we can use later to trigger certain BLE calls.
 Start by including <dk_buttons_and_leds.h> in your main.c file.
-Next, create a function to initiate the LEDs and buttons. I will call mine 'static void configure_dk_buttons_leds(void)'.
-The first thing we need to do in this to enable the LEDs. Looking in dk_buttons_and_leds.h, we can look for a function that does about that. Try adding 'dk_leds_init()' to your configure_dk_buttons_leds() function. Since this function returns and int, we would like to check the return value. 
-'''C
+Next, create a function to initiate the LEDs and buttons. I will call mine `static void configure_dk_buttons_leds(void)`.
+The first thing we need to do in this function is to enable the LEDs. Looking in dk_buttons_and_leds.h, we can look for a function that does about that. Try adding `dk_leds_init()` to your configure_dk_buttons_leds() function. Since this function returns and int, we would like to check the return value. 
+
+```C
     int err;
     err = dk_leds_init();
     if (err) {
         LOG_ERR("Couldn't init LEDS (err %d)", err);
     }
-'''
+```
+Let us add a specific LED and a blinking interval near the top of main.c
+```C
+#define RUN_STATUS_LED DK_LED1
+#define RUN_LED_BLINK_INTERVAL 1000
+```
+Open dk_buttons_and_leds.h to see if there is any ways you can turn on and off this LED from your main function. Our goal is to toggle the LED in a `for(;;)` loop (equivalent to a while(true) loop). There are several ways to do this. Try to find one that works. </br>
+*Hint: You can use k_sleep() to wait a given amount of time, and there is a macro called K_MSEC() that takes an input of ms, and converts it to ticks.*
 
-Then look for a function that can enable the buttons. 
+Now, let us look for a function that can enable the buttons in the dk_and_leds_init.h file. Remember to check the return value of the button init function. </br>
+*Hint: As this function initializes our buttons, it has an input parameter which is a handler.* 
+</br> 
+In your button handler try using the log module to print something whenever it is called. We will tweak it later.
+</br>
+If you try to build your application at this point, you will see that it fails because it can't find any references to your LED or buttons init function, even though you included dk_buttons_and_leds.h. The reason for this is that we didn't include the dk_buttons_and_leds.c file. We need to tell our application to do so. There are two ways of doing this. If you create your own files, you can add them manually, which we will do later for some custom files. But for now we want to add a file that belongs to NCS, and therefore we include it using configuration switches. 
+</br>
+In prj.conf, add the following:
+```
+# Configure buttons and LEDs.
+CONFIG_GPIO=y
+CONFIG_DK_LIBRARY=y
+```
+This snippet will enable the GPIOs and include the DK library. The way this is done in NCS/Zephyr is a bit complex. If you are interrested in how this works, you can look into the CMakeLists.txt file found in NCS\nrf\lib\CMakeLists.txt, and see how it includes stuff based on the configurations. For now we will accept that this is just how it works.
+After adding the configurations in prj.conf your project should compile, and something should be printed in the log whenever you press or release a button. Remember to call `configure_dk_buttons_leds()` in your main() function.
+
+</br>
+If you successfully compiled your application and flash it, you should now see that LED1 toggles every second, and that you receive a callback whenever a button is pressed or released.
+
+**Challenge:** </br>
+***Without peeking at the solution below, try to implement your button handler so that it stores the button number of the button that was pressed, and prints it in the log only when the button was pressed (and not released). Try printing out the parameters `button_state` and `has_changed` to see what they look like when you press the buttons. You may find a methid that is even more elegant than the suggested method below.***
+</br>
+</br>
+At this point, your main.c file should look something like this. You can use this as a template if you got stuck somewhere before this point:
+
+```C
+/*
+ * Copyright (c) 2012-2014 Wind River Systems, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <zephyr.h>
+#include <logging/log.h>
+#include <dk_buttons_and_leds.h>
+
+#define LOG_MODULE_NAME app
+LOG_MODULE_REGISTER(LOG_MODULE_NAME);
+#define RUN_STATUS_LED DK_LED1
+#define RUN_LED_BLINK_INTERVAL 1000
+
+/* Callbacks */
+void button_handler(uint32_t button_state, uint32_t has_changed)
+{
+	int button_pressed = 0;
+	if (has_changed & button_state)
+	{
+		switch (has_changed)
+		{
+			case DK_BTN1_MSK:
+				button_pressed = 1;
+				break;
+			case DK_BTN2_MSK:
+				button_pressed = 2;
+				break;
+			case DK_BTN3_MSK:
+				button_pressed = 3;
+				break;
+			case DK_BTN4_MSK:
+				button_pressed = 4;
+				break;
+			default:
+				break;
+		}
+		LOG_INF("Button %d pressed.", button_pressed);
+	}
+}
+
+/* Configurations */
+static void configure_dk_buttons_leds(void)
+{
+    int err;
+    err = dk_leds_init();
+    if (err) {
+        LOG_ERR("Couldn't init LEDS (err %d)", err);
+    }
+    err = dk_buttons_init(button_handler);
+    if (err) {
+        LOG_ERR("Couldn't init buttons (err %d)", err);
+    }
+}
+
+/* Main */
+void main(void)
+{
+    int blink_status = 0;
+	LOG_INF("Hello World! %s\n", CONFIG_BOARD);
+
+    configure_dk_buttons_leds();
+
+    LOG_INF("Running...");
+    for (;;) {
+        dk_set_led(RUN_STATUS_LED, (blink_status++)%2);
+        k_sleep(K_MSEC(RUN_LED_BLINK_INTERVAL));
+    }
+}
+```
