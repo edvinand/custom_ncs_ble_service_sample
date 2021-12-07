@@ -467,4 +467,165 @@ ssize_t bt_gatt_attr_read(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 [remote.h](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot2/remote_service/remote.h).*
 </br>
 </br>
-Now, try to connect to your device using nRF Connect, and see that you have a characteristic that you can read. Whenever you push a button on your DK and read it again, you should see the value update.
+Now, try to connect to your device using nRF Connect, and see that you have a characteristic that you can read using the refresh button in nRF Connect. Whenever you push a button on your DK and read it again, you should see that the is updated.
+
+
+### Step 5 - Characteristic Notifications
+When we are working on low energy devices, and a remote controller, it is not very efficient nor user friendly to have to ask the remote what the status of the last pressed button is. It would be a tradeoff between a long latency and a high current consumption. Therefore we have something called "notifications", which allows the peripheral to push changes to the central whenever they occur. This is set using something called Client Characteristic Configuration Descriptor (CCCD or CCC). The first thing we need to do is to add this descriptor to our characteristic. Do this by adding the last line to your Service macro in remote.c:
+
+```C
+/* This code snippet belongs to remote.c */
+BT_GATT_SERVICE_DEFINE(remote_srv,
+BT_GATT_PRIMARY_SERVICE(BT_UUID_REMOTE_SERVICE),
+    BT_GATT_CHARACTERISTIC(BT_UUID_REMOTE_BUTTON_CHRC,
+                    BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
+                    BT_GATT_PERM_READ,
+                    read_button_characteristic_cb, NULL, NULL),
+    BT_GATT_CCC(button_chrc_ccc_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+);
+```
+
+The first parameter is a callback that is triggered whenever someone writes to the CCC. The last parameter is the read/write permissions. Here we allow the central to both read and write to this configuration. This means that it can check whether or not notifications are enabled, and enable/disable it. Please note that we also added the BT_GATT_CHRC_NOTIFY in our properties for the characteristic itself, as we are now adding the possiblilty to enable notifications.
+
+In a similar way to what we did earlier, we can use the BT_GATT_CCC macro definition to find the expected type of callback. See if you can find it in gatt.h. </br></br>
+*Hint: it is a callback that is called whenever the CCC has changed*
+</br></br>
+The implementation of this callback itself is not that complex. We don't have to return anything. We'll just log that notifications were either enabled or disabled. 
+ ```C
+ /* This code snippet belongs to remote.c */
+void button_chrc_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
+{
+    bool notif_enabled = (value == BT_GATT_CCC_NOTIFY);
+    LOG_INF("Notifications %s", notif_enabled? "enabled":"disabled");
+
+}
+```
+
+The aim of this callback is to keep track of whether or not the central has enabled notifications. We would like to propagate this event to our main.c file. In order to keep things tidy, let us create an Enum that says whether notifications was enabled or disabled, and we want a callback struct similar to the one that we used to receive the connected and disconnected events. The only difference in this callback struct is that since this is a custom service, we need to implement these callbacks ourself.
+</br>
+Let us start by adding the enum:
+
+```C
+/* This code snippet belongs to remote.h */
+enum bt_button_notifications_enabled {
+	BT_BUTTON_NOTIFICATIONS_ENABLED,
+	BT_BUTTON_NOTIFICATIONS_DISABLED,
+};
+```
+
+Then let us declare our callback struct. Since we create this from scratch, we can call it whatever we like:
+
+```C
+/* This code snippet belongs to remote.h */
+struct bt_remote_service_cb {
+	void (*notif_changed)(enum bt_button_notifications_enabled status);
+};
+```
+
+So far the only function that we want to forward is the notif_changed, which we will use to forward the callback whenever notifications are enabled or disabled. In order to do so, we will need an instance of the struct in remote.c as well:
+
+```C
+/* This code snippet belongs to remote.c */
+static struct bt_remote_service_cb remote_service_callbacks;
+```
+
+And finally an instance actually containing the callbacks in main.c:
+
+```C
+/* This code snippet belongs to main.c */
+struct bt_remote_service_cb remote_callbacks = {
+	.notif_changed = on_notif_changed,
+};
+```
+
+Then we need to forward this remote_callbacks struct into bluetooth_init similar to the way we did with the bluetooth_callbacks struct.
+
+Then inside bluetooth_callbacks() in remote.c we will first check that they are not NULL pointers, and then populate them manually:
+
+```C
+/* This code snippet belongs to remote.c */
+    int err;
+    LOG_INF("Initializing Bluetooth");
+
+    if (bt_cb == NULL || remote_cb == NULL) {
+        return NRFX_ERROR_NULL;
+    }
+    bt_conn_cb_register(bt_cb);
+    remote_service_callbacks.notif_changed = remote_cb->notif_changed;
+    ...
+```
+
+now that we have this callback struct in remote.c, it means we can trigger the callback in main.c from remote.c. Add the following to button_chrc_ccc_cfg_changed():
+
+```C
+/* This code snippet belongs to remote.c */
+void button_chrc_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
+{
+    bool notif_enabled = (value == BT_GATT_CCC_NOTIFY);
+    LOG_INF("Notifications %s", notif_enabled? "enabled":"disabled");
+    if (remote_service_callbacks.notif_changed) {
+        remote_service_callbacks.notif_changed(notif_enabled?BT_BUTTON_NOTIFICATIONS_ENABLED:BT_BUTTON_NOTIFICATIONS_DISABLED);
+    }
+}
+```
+
+The reason we check the `if (remote_service_callback.notif_changed)` is that we need to check that this very callback function (notif_changed) is set before we call it. Now all we need is to implement the on_notif_changed() function in main.c. All we need it to do is to print that notifications are enabled or disabled:
+
+```C
+/* This code snippet belongs to main.c */
+void on_notif_changed(enum bt_button_notifications_enabled status)
+{
+    if (status == BT_BUTTON_NOTIFICATIONS_ENABLED) {
+        LOG_INF("Notifications enabled");
+    } else {
+        LOG_INF("Notifications disabled");
+    }
+}
+```
+
+</br>
+Now we are only a few steps away from sending our very first notification (!!).
+Let us add a function, send_button_notification(), in remote.c that we can call from main.c (declare it in remote.h).
+
+```C
+/* This code snippet belongs to remote.c */
+void on_sent(struct bt_conn *conn, void *user_data)
+{
+    ARG_UNUSED(user_data);
+    LOG_INF("Notification sent on connection %p", (void *)conn);
+}
+
+int send_button_notification(struct bt_conn *conn, uint8_t value)
+{
+    int err = 0;
+
+    struct bt_gatt_notify_params params = {0};
+    const struct bt_gatt_attr *attr = &remote_srv.attrs[2];
+
+    params.attr = attr;
+    params.data = &value;
+    params.len = 1;
+    params.func = on_sent;
+
+    err = bt_gatt_notify_cb(conn, &params);
+
+    return err;
+}
+```
+
+This one is a lot to take in, but let us see what is going on. in send_button_notification we take two input parameters. The pointer to the connection that we want to send the notification to, and the value of the characteristic, which is the actual payload data being transmitted. If you were to implement this from scratch, start by using the function bt_gatt_notify_cb() and look at what parameters it takes. The params parameter is the struct bt_gatt_notify_params. It holds a lot, but we only populate what we need in our case. We need the attribute, which points to the characteristic where we are actually sending the notification, and we need the value, the length of the value, and a callback function. This callback may be very useful in some cases where you are sending a lot of data, to keep track on when the data is sent. We will just use it to print that we have successfully sent a notification.
+</br>
+</br>
+Now try to call this function from the button handler, check the return value and see if you can send a notification from your peripheral to the connected central.
+</br>
+</br>
+*In case you got stuck anywhere since the last snapshot, I'll upload a 3rd snapshot here:</br>
+[main.c](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot3/main.c)</br>
+[remote.c](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot3/remote_service/remote.c)</br>
+[remote.h](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot3/remote_service/remote.h)*
+
+### Step 6 - Writing Bck to our Peripheral
+So now we can send notifications from our peripheral to our central. For a remote controller what more can you ask for? Well, let us say we want some sort of two way communication, where we want the central to be able to send messages back to the remote. Perhaps to read it out loud, toggle an LED when the TV is about to go to sleep, or perhaps you do not intend to develop a remote controller at all. We could use the same characteristic that we already have to send communications both ways, but let us create a new characteristic for this purpose.
+
+**Challenge:**</br>
+***Add a third UUID where you increment the byte that we did for the previous UUID once more. Give the characteristic handle name: 
