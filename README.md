@@ -398,6 +398,7 @@ If you followed the guide this far, your files should look something like this. 
 Let us add the service that we claim that we have when we advertise. We will use the macro BT_GATT_SERVICE_DEFINE to add our service. It is quite simple at the same time as it is quite complex. When we use this macro to create and add our service, the rest is done "under the hood" of NCS/Zephyr. By just adding this snippet to remote.c
 
 ```C
+/* This code snippet belongs to remote.c */
 BT_GATT_SERVICE_DEFINE(remote_srv,
 BT_GATT_PRIMARY_SERVICE(BT_UUID_REMOTE_SERVICE),
 );
@@ -408,4 +409,60 @@ Our first service |
 ------------ |
 <img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/first_service.PNG"> |
 
-However, a service without any characteristics isn't very impressive. Let us add a characteristic that we can read from our Central.
+However, a service without any characteristics isn't very impressive. Let us add a characteristic that we can read from our Central. </br>
+We start by defining a new UUID for our characteristic. Basically, you can copy your previous UUID define and increment the two bytes that you set to 0001 to 0002:
+
+```C
+/* This code snippet belongs to remote.h */
+/** @brief UUID of the Button Characteristic. **/
+#define BT_UUID_REMOTE_BUTTON_CHRC_VAL \
+	BT_UUID_128_ENCODE(0xe9ea0002, 0xe19b, 0x482d, 0x9293, 0xc7907585fc48)
+```
+Also, add the handle like we did with the service UUID:
+
+```C
+/* This code snippet belongs to remote.h */
+#define BT_UUID_REMOTE_BUTTON_CHRC 	BT_UUID_DECLARE_128(BT_UUID_REMOTE_BUTTON_CHRC_VAL)
+```
+
+I called my handle BT_UUID_REMOTE_BUTTON_CHRC. Whatever you call it, we will now add it to our service macro:
+
+```C
+BT_GATT_SERVICE_DEFINE(remote_srv,
+BT_GATT_PRIMARY_SERVICE(BT_UUID_REMOTE_SERVICE),
+    BT_GATT_CHARACTERISTIC(BT_UUID_REMOTE_BUTTON_CHRC,
+                    BT_GATT_CHRC_READ,
+                    BT_GATT_PERM_READ,
+                    read_button_characteristic_cb, NULL, NULL),
+);
+```
+
+What we are doing here is saying that we want to add a characteristic to our service using the UUID that we just defined. We claim that it is possible to read it, and then we give it the permission to be read. The read_button_characteristic is a callback that is triggered whenever someone is reading our characteristic. The first NULL is the callback for when someone is writing to our characteristic, which will never happen since it is not possible to write to this characteristic. The last NULL is the actual value. We will set that later. </br>
+First we need to implement the read_button_characteristic_cb callback function. It is a bit tricky to navigate to the callback definition of this macro, but if you look in gatt.h, where the BT_GATT_CHARACTERISTIC macro is defined, and search for "struct bt_gatt_attr" then this will hold the callbacks that we will use for read, and later for write callbacks. </br>
+So we see that the read callback should look something like:
+
+```C
+	ssize_t (*read)(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+			void *buf, uint16_t len, uint16_t offset);
+```
+
+Replace `(*read)` with the name we passed in `BT_GATT_CHARACTERISTIC` and return the return value from bt_gatt_attr_read():
+
+```C
+ssize_t bt_gatt_attr_read(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+			  void *buf, uint16_t buf_len, uint16_t offset,
+			  const void *value, uint16_t value_len)
+```
+
+*Hint: Create a parameter in remote.c that you call "uint8_t button_value", and set it to 0. Use the address of this value (&), and the sizeof(button_value) as input parameters for bt_gatt_attr_read()*
+</br>
+</br>
+**Challenge**
+***Before we try to connect again, create a function in remote.c that we can call from main.c (add declaration in remote.h) that changes the value of the parameter `button_value` based on an input parameter. Call it "set_button_value()" and call it in the button_handler from main.c, with the button_pressed parameter as the input.***
+</br>
+*Hint: If you are stuck, I uploaded another snapshot of the project here: 
+[main.c](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot2/main.c), 
+[remote.c](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot2/remote_service/remote.c), 
+[remote.h](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot2/remote_service/remote.h).*
+</br>
+Now, try to connect to your device using nRF Connect, and see that you have a characteristic that you can read. Whenever you push a button on your DK and read it again, you should see the value update.
