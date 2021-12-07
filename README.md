@@ -206,9 +206,9 @@ void main(void)
 ### Step 3 - Adding bluetooth
 It is finally time to add bluetooth to our project. A hint was given in the project name, but in case you missed it, we will write an application that mimics some sort of bluetooth remote, where we will be able to send button presses to a connected Bluetooth Low Energy Central. We will also add the oppurtynity to write back to the remote control. That may not be a typical feature for a remote control, but for the purpose of learning how to communicate in both directions we will add this. The connected central can either be your phone, a computer, or another nRF52. For this guide we will use a separate DK and nRF Connect for Desktop -> Bluetooth, but if you only have one DK, you can use [(nRF Connect for iOS or Android.)](https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-mobile)
 </br></br>
-Because we want to keep our main.c file as clutter free as possible, we will try to do most of the bluetooth configuration and handling in another file, and only push certain events back to main.c. Therefore we will start by adding a few custom files. Create a folder named ´remote_service` inside your application file: *remote_controller\src\remote_service\*. You can either do this from VSC or your operating system. Inside this folder, create two files: ´remote.h´ and ´remote.c´. To include these custom files to your project, open CMakeLists.txt, and add the following snippet at the end:
+Because we want to keep our main.c file as clutter free as possible, we will try to do most of the bluetooth configuration and handling in another file, and only push certain events back to main.c. Therefore we will start by adding a few custom files. Create a folder named `remote_service` inside your application file: *remote_controller\src\remote_service\*. You can either do this from VSC or your operating system. Inside this folder, create two files: `remote.h` and `remote.c`. To include these custom files to your project, open CMakeLists.txt, and add the following snippet at the end:
 
-´´´C
+```C
 # Custom files and folders
 
 target_sources(app PRIVATE
@@ -216,5 +216,5 @@ target_sources(app PRIVATE
 )
 
 zephyr_library_include_directories(src/remote_service)
-´´´
-*If you wanted to add more .c files, you could do so by separating them using ´;´ after remote.c. and have one file per line.*
+```
+*If you wanted to add more .c files, you could do so by separating them using `;` after remote.c. and have one file per line.*
