@@ -278,15 +278,20 @@ What we do here is:
 </br>
 After this sidetrack (rebuild/recompilation required), it is time to see what bt_enable does. In nRF Connect for VS Code, if you hold ctrl and hover bt_enable(), you should see the declaration of the function. If you ctrl click it, it should bring you to the definition. We can use this to see what it returns and what input parameters it takes.
 </br>
-Application Tree | 
+
+VSC hint | 
 ------------ |
 <img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/VSC_hint.png"> |
+
 </br>
 So we see that it returns an `int` and it takes an input `bt_ready_cb_t`. By going to the definition of `bt_ready_cb_t` you'll see that it is:
+
 ```C
 typedef void (*bt_ready_cb_t)(int err);
 ```
+
 This means a function pointer. It means that it takes a callback function as an input parameter. The callback is on the form: `void callback_name(int err)`. Let us use a callback called `bt_ready`, which we will implement above `bluetooth_init()` in remote.c, and pass it onto `bt_enable()`.
+
 ```C
 void bt_ready(int err)
 {
@@ -295,3 +300,69 @@ void bt_ready(int err)
     }
 }
 ```
+
+We want to wait for our callback before we continue with our application. In order to do this, we will use a semaphore. Define the semaphore near the top of remote.c:
+
+```C
+static K_SEM_DEFINE(bt_init_ok, 0, 1);
+```
+
+After `bt_enable(bt_ready);` try to take the semaphore, so that the application waits until it is given from somewhere else, and then try to give it in the bt_ready callback. </br>
+*Hint: The k_sem_take() requires a timeout. You can use K_FOREVER.*
+
+</br>
+</br>
+
+#### Advertising
+So far we have enabled Bluetooth, but now we didn't use it for anything. Let us add some Bluetooth advertising. We want to include two things in our advertisements. The device name and the UUID of the service that we will implement later. Let us start by adding the UUID (Universally Unique Identifier). I typically use an online UUID generator. Try using [(this online UUID Generator)](https://www.uuidgenerator.net/version4). In my case, I got a UUID which I translated to this format:
+ 
+ ```C
+ /* Add this to remote.h */
+ /** @brief UUID of the Remote Service. **/
+#define BT_UUID_REMOTE_SERV_VAL \
+	BT_UUID_128_ENCODE(0xe9ea0001, 0xe19b, 0x482d, 0x9293, 0xc7907585fc48)
+```
+
+Copy your own generated UUID into the same format, and set the two last bytes of the first sections to 0001, like I did. This is so that it is easier to recognize them later. 
+Also add the following line below the definition of your UUID:
+
+```C
+#define BT_UUID_REMOTE_SERVICE  BT_UUID_DECLARE_128(BT_UUID_REMOTE_SERV_VAL)
+```
+
+These are just two ways to define the same UUID, which we will use later. Now, open remote.c, and let us define the advertising packets. We will use two advertising packets. The normal advertising data, and something called scan response data.
+
+Add this a suitable place in remote.c:
+
+```C
+#define DEVICE_NAME CONFIG_BT_DEVICE_NAME
+#define DEVICE_NAME_LEN (sizeof(DEVICE_NAME)-1)
+
+
+static const struct bt_data ad[] = {
+    BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
+    BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN)
+};
+
+static const struct bt_data sd[] = {
+    BT_DATA_BYTES(BT_DATA_UUID128_ALL, BT_UUID_REMOTE_SERV_VAL),
+};
+```
+
+So we use the CONFIG_BT_DEVICE_NAME from our prj.conf file as our device name, and we apply this name in our advertising packet `ad[]`. In our Scan response packet, `sd[]` we add our randomly generated UUID. Now that we have the data we want to advertise, we can start the advertising from bluetooth_init(), after the bt_init_ok semaphore has been taken.
+
+```C
+/* This snippet belongs in bluetooth_init() in remote.c */
+    err = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
+    if (err){
+        LOG_ERR("couldn't start advertising (err = %d", err);
+        return err;
+    }
+```
+
+Now your device should advertise if you flash it with the latest build. Open nRF Connect for Desktop/iOS/Android and start scanning for the device. If there are many BLE devices nearby, try to sort by RSSI (Received Signal Strength Indicator), or ad a filter to the advertising name:
+</br>
+
+Scan uisng nRF Connect for Desktop | 
+------------ |
+<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/scan_advertisements.PNG"> |
