@@ -86,7 +86,7 @@ void button_handler(uint32_t button_state, uint32_t has_changed)
 			default:
 				break;
 		}
-		LOG_INF("Button %d pressed.", button_pressed);
+        LOG_INF("Button %d pressed.", button_pressed);
         set_button_value(button_pressed);
         err = send_button_notification(current_conn, button_pressed);
         if (err) {
