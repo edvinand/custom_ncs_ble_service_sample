@@ -279,11 +279,12 @@ What we do here is:
 After this sidetrack (rebuild/recompilation required), it is time to see what bt_enable does. In nRF Connect for VS Code, if you hold ctrl and hover bt_enable(), you should see the declaration of the function. If you ctrl click it, it should bring you to the definition. We can use this to see what it returns and what input parameters it takes.
 </br>
 
-VSC hint | 
+VSC Navigation | 
 ------------ |
 <img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/VSC_hint.png"> |
 
 </br>
+
 So we see that it returns an `int` and it takes an input `bt_ready_cb_t`. By going to the definition of `bt_ready_cb_t` you'll see that it is:
 
 ```C
@@ -679,7 +680,7 @@ Then we need to remember to populate this callback in bluetooth_init():
     remote_service_callbacks.data_received = remote_cb->data_received;
 ```
 
-Before we implement the callback in main, let us look at the callback in remote.c. As we saw in the start of this tutorial, it is a bit tricky to find the callback type for the write and read callbacks. Look for the definition of the "struct bt_gatt_attr" in gatt.h, and look at the `(*write) type. There are a lot of parameters, so let us look into them:
+Before we implement the callback in main, let us look at the callback in remote.c. As we saw in the start of this tutorial, it is a bit tricky to find the callback type for the write and read callbacks. Look for the definition of the "struct bt_gatt_attr" in gatt.h, and look at the `(*write)` type. There are a lot of parameters, so let us look into them:
 
 ```C
 static ssize_t on_write(struct bt_conn *conn,
@@ -724,12 +725,15 @@ If you are using nRF Connect for Desktop, unfortunately you can't write textstri
 Writing to a Characteristic in nRF Connect for Desktop | 
 ------------ |
 <img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/123.png"> |
+
 </br>
 And you should hopefully see it printed in the log of your peripheral. 
 </br>
 </br>
+
 You can find online string-to-hex generators online, such as [this one](https://string-functions.com/string-hex.aspx). Try pasting a text string, such as: </br>
 48 65 6C 6C 6F 77 6F 72 6C 64 21
 </br>
 </br>
-You can find the final files and NCS project [here](https://github.com/edvinand/bluetooth_intro/tree/main/remote_controller).
+
+You can find the final version of the files in the NCS project [here](https://github.com/edvinand/bluetooth_intro/tree/main/remote_controller).
