@@ -92,7 +92,7 @@ void button_handler(uint32_t button_state, uint32_t has_changed)
         if (err) {
             LOG_ERR("Couldn't send notificaton. (err: %d)", err);
         }
-	}
+    }
 }
 
 /* Configurations */
