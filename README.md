@@ -387,8 +387,25 @@ struct bt_conn_cb bluetooth_callbacks = {
 ***Implement these callbacks by looking at the bt_conn_cb struct definition (ctrl click it). For now, you can just print something using `LOG_INF()` in the events. Then try to pass the bluetooth_callbacks on into `bluetooth_init()`, and register the callbacks using `bt_conn_cb_register()` before the call to `bt_enable()`. If you are stuck, you can find a solution below.***
 </br>
 </br>
-If you followed the guide this far, your files should look something like this. You can use this in case you got stuck somewhere. Please note that I also added some new code to the connected and disconnected events in main.c, and a current_conn parameter to keep track of the current connection.
+If you followed the guide this far, your files should look something like this. You can use this in case you got stuck somewhere. Please note that I also added some new code to the connected and disconnected events in main.c, and a current_conn parameter to keep track of the current connection. 
 </br>
 [main.c](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot1/main.c)</br>
 [remote.c](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot1/remote_service/remote.c)</br>
 [remote.h](https://github.com/edvinand/bluetooth_intro/blob/main/temp_files/snapshot1/remote_service/remote.h)</br>
+
+
+### Step 4 - Adding our First Bluetooth Service
+Let us add the service that we claim that we have when we advertise. We will use the macro BT_GATT_SERVICE_DEFINE to add our service. It is quite simple at the same time as it is quite complex. When we use this macro to create and add our service, the rest is done "under the hood" of NCS/Zephyr. By just adding this snippet to remote.c
+
+```C
+BT_GATT_SERVICE_DEFINE(remote_srv,
+BT_GATT_PRIMARY_SERVICE(BT_UUID_REMOTE_SERVICE),
+);
+```
+
+And voila! We have our first Bluetooth Low Energy service. Try to connect to it using nRF Connect, and see that you can see the service.
+Our first service | 
+------------ |
+<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/first_service.PNG"> |
+
+However, a service without any characteristics isn't very impressive. Let us add a characteristic that we can read from our Central.
