@@ -8,9 +8,9 @@ Start by adding the "hello_world" sample from *NCS\zephyr\samples\hello_world* a
 
 # SW Requirements
 As mentioned in the prerequisites, you'll need:
-- nRF Connect for Desktop
-- Visual Studio Code
-- nRF Connect for Visual Studio Code plugin (If you want to, you can use *west* directly instead of nRF Connect for Visual Studio code, but we will use VS Code in this guide).
+- [nRF Connect for Desktop](https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-desktop)
+- [Visual Studio Code](https://code.visualstudio.com/)
+- [nRF Connect for Visual Studio Code plugin](https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-VS-Code) (If you want to, you can use *west* directly instead of nRF Connect for Visual Studio code, but we will use VS Code in this guide).
 
 
 
