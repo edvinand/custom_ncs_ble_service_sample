@@ -627,5 +627,108 @@ Now try to call this function from the button handler, check the return value an
 ### Step 6 - Writing Bck to our Peripheral
 So now we can send notifications from our peripheral to our central. For a remote controller what more can you ask for? Well, let us say we want some sort of two way communication, where we want the central to be able to send messages back to the remote. Perhaps to read it out loud, toggle an LED when the TV is about to go to sleep, or perhaps you do not intend to develop a remote controller at all. We could use the same characteristic that we already have to send communications both ways, but let us create a new characteristic for this purpose.
 
-**Challenge:**</br>
-***Add a third UUID where you increment the byte that we did for the previous UUID once more. Give the characteristic handle name: 
+**Todo:**</br>
+***Add a third UUID where you increment the byte that we did for the previous UUID once more. Call the UUID BT_UUID_REMOTE_MESSAGE_CHRC_VAL and call the characteristic handle BT_UUID_REMOTE_MESSAGE_CHRC***
+
+Let us add the new characteristic to our service macro:
+
+```C
+/* This code snippet belongs to remote.c */
+BT_GATT_SERVICE_DEFINE(remote_srv,
+BT_GATT_PRIMARY_SERVICE(BT_UUID_REMOTE_SERVICE),
+    BT_GATT_CHARACTERISTIC(BT_UUID_REMOTE_BUTTON_CHRC,
+                    BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
+                    BT_GATT_PERM_READ,
+                    read_button_characteristic_cb, NULL, NULL),
+    BT_GATT_CCC(button_chrc_ccc_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+    BT_GATT_CHARACTERISTIC(BT_UUID_REMOTE_MESSAGE_CHRC,
+                    BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+                    BT_GATT_PERM_WRITE,
+                    NULL, on_write, NULL),
+);
+```
+
+We have seen this before. We are adding a characteristic to our old service, we claim that the central can write to it, and we give the central the permission to write to it. We don't need a read callback, but we add the `on_write` callback. We do not care about the start value of the characteristic as well, since it is not possible for the central to read it.
+</br>
+</br>
+What remains is to implement our on_write callback. This is a typical callback you would want to propagate to main.c, as in a commercial product, you may want to control some other peripherals depending on the content of the message from the central. Luckily we already have a way of forwarding events from remote.c to our main.c file. Let us add another event callback in our bt_remote_service_cb struct in remote.h:
+
+```C
+/* This code snippet belongs to remote.h */
+struct bt_remote_service_cb {
+	void (*notif_changed)(enum bt_button_notifications_enabled status);
+	void (*data_received)(struct bt_conn *conn, const uint8_t *const data, uint16_t len);
+};
+```
+
+The parameters that we pass on into our data_received event is totally up to you. For now we will pass the connection pointer, the actual data, and the length of the data. Now we add it to our main.c instance of our remote service callbacks:
+
+```C
+/* This code snippet belongs to main.c */
+struct bt_remote_service_cb remote_callbacks = {
+    .notif_changed = on_notif_changed,
+    .data_received = on_data_received,
+};
+```
+Then we need to remember to populate this callback in bluetooth_init():
+
+```C
+/* This code snippet belongs to remote.c -> bluetooth_init() */
+    bt_conn_cb_register(bt_cb);
+    remote_service_callbacks.notif_changed = remote_cb->notif_changed;
+    remote_service_callbacks.data_received = remote_cb->data_received;
+```
+
+Before we implement the callback in main, let us look at the callback in remote.c. As we saw in the start of this tutorial, it is a bit tricky to find the callback type for the write and read callbacks. Look for the definition of the "struct bt_gatt_attr" in gatt.h, and look at the `(*write) type. There are a lot of parameters, so let us look into them:
+
+```C
+static ssize_t on_write(struct bt_conn *conn,
+			  const struct bt_gatt_attr *attr,
+			  const void *buf,
+			  uint16_t len,
+			  uint16_t offset,
+			  uint8_t flags)
+{
+    LOG_INF("Received data, handle %d, conn %p",
+        attr->handle, (void *)conn);
+
+    if (remote_service_callbacks.data_received) {
+        remote_service_callbacks.data_received(conn, buf, len);
+    }
+    return len;
+}
+```
+
+You can see that there are a lot of parameters, but all we really need to do is to forward the important ones to our custom callback and return the length of the message (telling the stack that we have handled the entire message).
+
+Finally, in order to print the message in main.c, you can add the following:
+
+```C
+/* This code snippet belongs to main.c */
+void on_data_received(struct bt_conn *conn, const uint8_t *const data, uint16_t len)
+{
+    uint8_t temp_str[len+1];
+    memcpy(temp_str, data, len);
+    temp_str[len] = 0x00;
+
+    LOG_INF("Received data on conn %p. Len: %d", (void *)conn, len);
+    LOG_INF("Data: %s", log_strdup(temp_str));
+}
+```
+What we are doing here is first that we copy the content of the data pointer to a temporary string. This is not strictly necessary, but in this case we want to print the data to the log, and one way to do that is to use the log_strdup() which is looking for a zero-terminated string. To avoid writing to the actual data buffer (which is a very bad idea) we copy the content and add a 0x00 byte at the end.
+</br>
+Then we print who sent the data, the length of the data, and the actual message. 
+
+If you are using nRF Connect for Desktop, unfortunately you can't write textstrings like you can in nRF Connect for Android or iOS. Let us try to write the hexadecimal values for the string "123", which is 31 32 33 into nRF Connect for Desktop:
+
+Writing to a Characteristic in nRF Connect for Desktop | 
+------------ |
+<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/123.png"> |
+</br>
+And you should hopefully see it printed in the log of your peripheral. 
+</br>
+</br>
+You can find online string-to-hex generators online, such as [this one](https://string-functions.com/string-hex.aspx). Try pasting a text string, such as: </br>
+48 65 6C 6C 6F 77 6F 72 6C 64 21
+</br>
+</br>
