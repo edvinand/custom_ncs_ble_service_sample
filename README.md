@@ -68,7 +68,7 @@ Congratulations! You have built and flashed our first application. Let's move on
 </br>
 Add the following:
 '''
-# Configure logger
+#### Configure logger
 CONFIG_LOG=y
 CONFIG_USE_SEGGER_RTT=n
 CONFIG_LOG_BACKEND_UART=y
