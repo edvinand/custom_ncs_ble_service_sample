@@ -369,6 +369,11 @@ Scan uisng nRF Connect for Desktop |
 <img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/scan_advertisements.PNG"> |
 
 *Note: In your case it probably will not say "Remote Service" in the Services field, but rather the UUID that you generated. If you want to save this custom UUID in nRF Connect for Desktop, click the gear icon (settings) on the nrf5x device, and select "Open UUID definitions file". See if you can copy the template of one of the services, and insert your own UUID.*
+
+Open the UUID definitions file | 
+------------ |
+<img src="https://github.com/edvinand/bluetooth_intro/blob/main/images/open_uuid_definitions_file.png"> |
+
 </br>
 </br>
 You can actually connect to your device, since we claimed in the `BT_LE_ADV_CONN` that we are connectable. However, if you try to connect to it, you will see that other than the Generic Attribute and the Generic Access services, we don't actually have the custom service that we claimed to have in the advertising packet. We will fix that later, but first, let us try to inform our application that something actually connected to us.
