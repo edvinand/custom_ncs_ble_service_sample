@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <zephyr.h>
-#include <logging/log.h>
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 #include <dk_buttons_and_leds.h>
 #include "remote.h"
 
@@ -73,7 +73,7 @@ void on_data_received(struct bt_conn *conn, const uint8_t *const data, uint16_t 
     temp_str[len] = 0x00;
 
     LOG_INF("Received data on conn %p. Len: %d", (void *)conn, len);
-    LOG_INF("Data: %s", log_strdup(temp_str));
+    LOG_INF("Data: %s", temp_str);
 }
 
 void button_handler(uint32_t button_state, uint32_t has_changed)
