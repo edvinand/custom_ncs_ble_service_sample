@@ -2,10 +2,10 @@
 #include <zephyr.h>
 #include <logging/log.h>
 
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/uuid.h>
-#include <bluetooth/gatt.h>
-#include <bluetooth/hci.h>
+#include <zephyr/bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/uuid.h>
+#include <zephyr/bluetooth/gatt.h>
+#include <zephyr/bluetooth/hci.h>
 
 /** @brief UUID of the Remote Service. **/
 #define BT_UUID_REMOTE_SERV_VAL \
